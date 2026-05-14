@@ -1,0 +1,36 @@
+{
+  "name": "ritual-mirror",
+  "private": true,
+  "packageManager": "pnpm@10.0.0",
+  "scripts": {
+    "build": "pnpm -r build",
+    "dev": "pnpm --filter web dev",
+    "worker:dev": "pnpm --filter worker dev",
+    "contracts:build": "forge build --root contracts",
+    "contracts:test": "forge test --root contracts",
+    "contracts:deploy:ritual": "forge script contracts/script/Deploy.s.sol:Deploy --rpc-url $RITUAL_RPC_URL --broadcast -vvvv",
+    "contracts:sync-env": "node --import tsx scripts/sync-deploy-addresses.ts",
+    "ritual:genesis:encode": "node --import tsx scripts/encode-genesis.ts",
+    "ritual:sovereign:direct": "node --import tsx scripts/launch-sovereign-direct.ts",
+    "ritual:sovereign:launch": "node --import tsx scripts/launch-sovereign-factory.ts",
+    "ritual:sovereign:result": "node --import tsx scripts/fetch-sovereign-result.ts",
+    "ritual:persistent:launch": "node --import tsx scripts/launch-persistent-factory.ts",
+    "ritual:secrets:generate": "node --import tsx scripts/generate-encrypted-secrets.ts",
+    "ritual:genesis:record": "node --import tsx scripts/record-genesis-result.ts",
+    "ritual:genesis:finalize": "node --import tsx scripts/finalize-live-genesis.ts",
+    "ritual:launcher:record": "node --import tsx scripts/record-persistent-launcher.ts",
+    "ritual:jobs:check": "node --import tsx scripts/check-jobs.ts",
+    "ritual:factories:check": "node --import tsx scripts/check-factories.ts",
+    "ritual:wallet:check": "node --import tsx scripts/check-wallet.ts",
+    "ritual:wallet:fund": "node --import tsx scripts/fund-ritual-wallet.ts",
+    "ritual:agents:preflight": "node --import tsx scripts/preflight-agents.ts",
+    "ritual:hf:sync": "node --import tsx scripts/sync-hf-workspace.ts"
+  },
+  "devDependencies": {
+    "@ritual-mirror/ritual": "workspace:*",
+    "eciesjs": "^0.4.18",
+    "viem": "^2.21.55",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}

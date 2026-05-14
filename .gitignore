@@ -1,0 +1,17 @@
+.env
+.env.local
+.ritual-secrets.generated.env
+node_modules
+.next
+out
+dist
+cache
+.DS_Store
+.tmp
+broadcast
+contracts/out
+contracts/cache
+*.log
+apps/web/.env.local
+.codex
+.ritual-build

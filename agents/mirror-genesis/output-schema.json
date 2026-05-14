@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "MirrorProfile",
+  "type": "object",
+  "required": [
+    "mirrorName",
+    "archetype",
+    "mission",
+    "strengths",
+    "blindSpots",
+    "ritualPrimitiveFit",
+    "voiceStyle",
+    "agentPrompt",
+    "memorySeed",
+    "nftTraits",
+    "shareText"
+  ],
+  "properties": {
+    "mirrorName": { "type": "string", "minLength": 1 },
+    "archetype": { "type": "string", "minLength": 1 },
+    "mission": { "type": "string", "minLength": 1 },
+    "strengths": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+    "blindSpots": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+    "ritualPrimitiveFit": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+    "voiceStyle": { "type": "string", "minLength": 1 },
+    "agentPrompt": { "type": "string", "minLength": 1 },
+    "memorySeed": { "type": "string", "minLength": 1 },
+    "nftTraits": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["trait_type", "value"],
+        "properties": {
+          "trait_type": { "type": "string" },
+          "value": { "type": "string" }
+        }
+      }
+    },
+    "shareText": { "type": "string", "minLength": 1 },
+    "imagePrompt": { "type": "string" }
+  },
+  "additionalProperties": false
+}
