@@ -10,9 +10,9 @@ import {
   type MirrorStatusResponse
 } from "@ritual-mirror/ritual";
 import { createPublicClient, getAddress, http, isAddress, zeroAddress, zeroHash, type Address } from "viem";
-import { loadConfig } from "./config";
+import { loadWebServerConfig } from "./config";
 
-const config = loadConfig();
+const config = loadWebServerConfig();
 
 const client = createPublicClient({
   chain: ritualTestnet,
@@ -60,10 +60,10 @@ export async function getMirrorStatus(address: string): Promise<MirrorStatusResp
   const owner = getAddress(address);
   const diagnostics: string[] = [];
 
-  if (!config.registryAddress) diagnostics.push("REGISTRY_ADDRESS is not configured in worker.");
-  if (!config.nftAddress) diagnostics.push("NFT_ADDRESS is not configured in worker.");
-  if (!config.sovereignConsumerAddress) diagnostics.push("SOVEREIGN_CONSUMER_ADDRESS is not configured in worker.");
-  if (!config.agentManagerAddress) diagnostics.push("AGENT_MANAGER_ADDRESS is not configured in worker.");
+  if (!config.registryAddress) diagnostics.push("REGISTRY_ADDRESS is not configured.");
+  if (!config.nftAddress) diagnostics.push("NFT_ADDRESS is not configured.");
+  if (!config.sovereignConsumerAddress) diagnostics.push("SOVEREIGN_CONSUMER_ADDRESS is not configured.");
+  if (!config.agentManagerAddress) diagnostics.push("AGENT_MANAGER_ADDRESS is not configured.");
 
   const registryAddress = config.registryAddress;
   const nftAddress = config.nftAddress;
@@ -154,26 +154,16 @@ export async function getMirrorStatus(address: string): Promise<MirrorStatusResp
   if (minted) phase = "minted";
 
   if (!recordExists) diagnostics.push("No active registry record was found for this address.");
-  if (recordExists && !deliveredGenesis) {
-    diagnostics.push("Registry record exists, but no delivered Genesis result is linked yet.");
-  }
-  if (recordExists && deliveredGenesis && !storedLauncher) {
-    diagnostics.push("Genesis is linked, but no Persistent Agent launcher is stored yet.");
-  }
-  if (spawnRequested && !storedLauncher) {
-    diagnostics.push("Spawn request is recorded in AgentManager, but launcher callback has not completed.");
-  }
+  if (recordExists && !deliveredGenesis) diagnostics.push("Registry record exists, but no delivered Genesis result is linked yet.");
+  if (recordExists && deliveredGenesis && !storedLauncher) diagnostics.push("Genesis is linked, but no Persistent Agent launcher is stored yet.");
+  if (spawnRequested && !storedLauncher) diagnostics.push("Spawn request is recorded in AgentManager, but launcher callback has not completed.");
   if (pendingJob === true) diagnostics.push("AsyncJobTracker reports a pending job for this sender.");
 
   const launcher = agentLauncher && agentLauncher !== zeroAddress ? agentLauncher : undefined;
   const agentDiagnostics: string[] = [];
   if (!launcher && !storedLauncher) agentDiagnostics.push("No Persistent Agent launcher is stored for this Mirror.");
-  if (launcher || storedLauncher) {
-    agentDiagnostics.push("Heartbeat transport is not wired to AgentHeartbeat yet.");
-  }
-  if (!config.relayUrl) {
-    agentDiagnostics.push("RELAY_URL is not configured for agent chat transport.");
-  }
+  if (launcher || storedLauncher) agentDiagnostics.push("Heartbeat transport is not wired to AgentHeartbeat yet.");
+  if (!config.relayUrl) agentDiagnostics.push("RELAY_URL is not configured for agent chat transport.");
 
   const agentStatus = agentStatusMap[agentStatusCode] ?? "none";
   const relayConfigured = !!config.relayUrl;

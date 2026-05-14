@@ -11,6 +11,9 @@ export type WorkerConfig = {
   asyncJobTrackerAddress?: `0x${string}`;
   daProvider?: string;
   hfRepoId?: string;
+  relayUrl?: string;
+  relayPollTimeoutMs: number;
+  relayPollIntervalMs: number;
 };
 
 function applyEnvFile(filePath: string) {
@@ -47,7 +50,7 @@ for (const candidate of [
 
 export function loadConfig(): WorkerConfig {
   return {
-    port: Number(process.env.WORKER_PORT ?? 8787),
+    port: Number(process.env.PORT ?? process.env.WORKER_PORT ?? 8787),
     rpcUrl: process.env.RITUAL_RPC_URL ?? "https://rpc.ritualfoundation.org",
     registryAddress: process.env.REGISTRY_ADDRESS as `0x${string}` | undefined,
     nftAddress: process.env.NFT_ADDRESS as `0x${string}` | undefined,
@@ -55,6 +58,9 @@ export function loadConfig(): WorkerConfig {
     agentManagerAddress: process.env.AGENT_MANAGER_ADDRESS as `0x${string}` | undefined,
     asyncJobTrackerAddress: process.env.ASYNC_JOB_TRACKER_ADDRESS as `0x${string}` | undefined,
     daProvider: process.env.DA_PROVIDER,
-    hfRepoId: process.env.HF_REPO_ID
+    hfRepoId: process.env.HF_REPO_ID,
+    relayUrl: process.env.RELAY_URL,
+    relayPollTimeoutMs: Number(process.env.RELAY_POLL_TIMEOUT_MS ?? 45000),
+    relayPollIntervalMs: Number(process.env.RELAY_POLL_INTERVAL_MS ?? 2000)
   };
 }

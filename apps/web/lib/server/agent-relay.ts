@@ -1,5 +1,5 @@
-import { loadConfig } from "./config";
-import { getMirrorStatus } from "./mirrorStatus";
+import { loadWebServerConfig } from "./config";
+import { getMirrorStatus } from "./mirror-status";
 
 export type ChatRequest = {
   address: string;
@@ -14,7 +14,7 @@ export type ChatResponse =
     }
   | {
       status: "offline";
-    reason: string;
+      reason: string;
     };
 
 type RelayMessage = {
@@ -25,7 +25,7 @@ type RelayMessage = {
   timestamp?: string | number;
 };
 
-const config = loadConfig();
+const config = loadWebServerConfig();
 
 function normalizeRelayUrl(url: string) {
   return url.replace(/\/$/, "");
@@ -113,7 +113,7 @@ export async function askPersistentMirror({ address, question }: ChatRequest): P
   }
 
   try {
-    const agentAddress = status.agent.launcher!;
+    const agentAddress = status.agent.launcher;
     const baselinePayload = await relayJson(`/replies/${agentAddress}`);
     const baseline = new Set(visibleRelayMessages(baselinePayload).map(messageIdentity));
 

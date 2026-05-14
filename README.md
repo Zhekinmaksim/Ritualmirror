@@ -46,6 +46,70 @@ NEXT_PUBLIC_AGENT_MANAGER_ADDRESS=0x...
 
 Restart the web app after changing env vars. The create flow links configured contract addresses and transaction hashes to the Ritual explorer.
 
+## Production Deploy
+
+Production can run in two modes:
+
+- Vercel-only: `apps/web` serves the UI and the status/chat API routes directly
+- Split services: `apps/web` on Vercel plus `apps/worker` on a long-running container host
+
+### Web on Vercel
+
+The repo now includes [vercel.json](/Users/zmaxx/Projects/Ritual%20Mirror/vercel.json) so Vercel can build from the monorepo root with:
+
+```bash
+pnpm install --frozen-lockfile
+pnpm --filter web build
+```
+
+Set these Vercel environment variables:
+
+```env
+NEXT_PUBLIC_RITUAL_RPC_URL=https://rpc.ritualfoundation.org
+NEXT_PUBLIC_CHAIN_ID=1979
+NEXT_PUBLIC_METADATA_BASE_URL=https://ritualmirror.xyz
+NEXT_PUBLIC_HF_REPO_ID=Zmaxx81/ritual-mirror-workspace
+NEXT_PUBLIC_REGISTRY_ADDRESS=0xEb135f44668e09Aea5341Cf167D6eB1d54910837
+NEXT_PUBLIC_NFT_ADDRESS=0xaaA31769A56E88771867bF7f3E2E8bf1a9110dE5
+NEXT_PUBLIC_SOVEREIGN_CONSUMER_ADDRESS=0x0e71Ef44054F04299CcbaE3eFfa76FE06057519C
+NEXT_PUBLIC_AGENT_MANAGER_ADDRESS=0xaCa0F42E600473a34C432bf9c2078F4C6f09A22B
+RITUAL_WORKER_URL=https://your-worker-host
+```
+
+`RITUAL_WORKER_URL` is now optional. If it is unset, the Next API routes use the built-in server-side status and relay handlers directly on Vercel.
+
+### Worker service
+
+The worker now supports a production `start` command, `PORT`, and an env-driven relay transport:
+
+- [apps/worker/package.json](/Users/zmaxx/Projects/Ritual%20Mirror/apps/worker/package.json)
+- [apps/worker/.env.example](/Users/zmaxx/Projects/Ritual%20Mirror/apps/worker/.env.example)
+- [apps/worker/Dockerfile](/Users/zmaxx/Projects/Ritual%20Mirror/apps/worker/Dockerfile)
+
+Expected worker env:
+
+```env
+PORT=8787
+RITUAL_RPC_URL=https://rpc.ritualfoundation.org
+REGISTRY_ADDRESS=0xEb135f44668e09Aea5341Cf167D6eB1d54910837
+NFT_ADDRESS=0xaaA31769A56E88771867bF7f3E2E8bf1a9110dE5
+SOVEREIGN_CONSUMER_ADDRESS=0x0e71Ef44054F04299CcbaE3eFfa76FE06057519C
+AGENT_MANAGER_ADDRESS=0xaCa0F42E600473a34C432bf9c2078F4C6f09A22B
+ASYNC_JOB_TRACKER_ADDRESS=0xC069FFCa0389f44eCA2C626e55491b0ab045AEF5
+DA_PROVIDER=hf
+HF_REPO_ID=Zmaxx81/ritual-mirror-workspace
+RELAY_URL=https://your-relay-host
+RELAY_POLL_TIMEOUT_MS=45000
+RELAY_POLL_INTERVAL_MS=2000
+```
+
+Build / run:
+
+```bash
+pnpm --filter worker build
+pnpm --filter worker start
+```
+
 ## Factory-Backed Launch Flow
 
 The real Ritual-native launch path is now script-driven, not browser-driven. This is intentional:
@@ -91,7 +155,13 @@ If you only want the Genesis bridge and HF sync, disable the persistent leg:
 FINALIZE_PERSISTENT=0 BROADCAST=1 pnpm ritual:genesis:finalize 0xUSER 0xJOB_ID 0xRECEIVER 0xPROFILE_HASH https://.../api/metadata/0xUSER
 ```
 
-Current limitation: this repo does not yet vendor a local ECIES helper for generating `SOVEREIGN_ENCRYPTED_SECRETS_HEX` and `PERSISTENT_ENCRYPTED_SECRETS_HEX`. Use the local Ritual skill examples or your own operator tooling to produce those ciphertext blobs.
+This repo now includes a local helper for encrypted secret generation:
+
+```bash
+pnpm ritual:secrets:generate
+```
+
+The ciphertext must still be regenerated whenever the selected executor public key changes.
 
 ## Ritual Integration Status
 
@@ -100,4 +170,4 @@ The repository now contains real factory-backed launch scripts, predicted child 
 - encrypted secret blob generation,
 - HF workspace file availability,
 - actual Phase 2 callback delivery on Ritual testnet,
-- final relay wiring to a running Persistent Agent instance.
+- final live relay URL from the spawned Persistent Agent deployment.

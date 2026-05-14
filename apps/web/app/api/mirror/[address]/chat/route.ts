@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { isAddress } from "viem";
+import { askPersistentMirror } from "@/lib/server/agent-relay";
 import { workerBaseUrl } from "@/lib/worker-server";
 
 export async function POST(request: Request, { params }: { params: Promise<{ address: string }> }) {
@@ -9,9 +10,27 @@ export async function POST(request: Request, { params }: { params: Promise<{ add
   }
 
   const body = await request.text();
+  const relayWorker = workerBaseUrl();
+
+  if (!relayWorker) {
+    try {
+      const parsed = body ? JSON.parse(body) : {};
+      const response = await askPersistentMirror({ address, question: String(parsed.question ?? "") });
+      return NextResponse.json(response, { status: response.status === "online" ? 200 : 503 });
+    } catch {
+      return NextResponse.json(
+        {
+          address,
+          status: "offline",
+          error: "Server-side chat relay failed."
+        },
+        { status: 503 }
+      );
+    }
+  }
 
   try {
-    const response = await fetch(`${workerBaseUrl()}/mirror/${address}/chat`, {
+    const response = await fetch(`${relayWorker}/mirror/${address}/chat`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body
@@ -23,7 +42,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ add
       {
         address,
         status: "offline",
-        error: "Worker is unreachable. Set RITUAL_WORKER_URL or start apps/worker."
+        error: "Worker is unreachable. Set RITUAL_WORKER_URL or use built-in server relay."
       },
       { status: 503 }
     );

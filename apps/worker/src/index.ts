@@ -6,12 +6,26 @@ import { getMirrorStatus } from "./mirrorStatus";
 
 const config = loadConfig();
 
+function sendJson(res: import("node:http").ServerResponse, status: number, payload: unknown) {
+  res.writeHead(status, {
+    "content-type": "application/json",
+    "access-control-allow-origin": "*",
+    "access-control-allow-methods": "GET,POST,OPTIONS",
+    "access-control-allow-headers": "content-type"
+  });
+  res.end(JSON.stringify(payload));
+}
+
 const server = createServer(async (req, res) => {
   const url = new URL(req.url ?? "/", `http://${req.headers.host ?? "localhost"}`);
 
+  if (req.method === "OPTIONS") {
+    sendJson(res, 200, { ok: true });
+    return;
+  }
+
   if (req.method === "GET" && url.pathname === "/health") {
-    res.writeHead(200, { "content-type": "application/json" });
-    res.end(JSON.stringify({ ok: true, chainId: 1979, rpcUrl: config.rpcUrl }));
+    sendJson(res, 200, { ok: true, chainId: 1979, rpcUrl: config.rpcUrl, relayUrl: config.relayUrl ?? null });
     return;
   }
 
@@ -20,16 +34,12 @@ const server = createServer(async (req, res) => {
     try {
       const status = await getMirrorStatus(address);
       const heartbeat = await checkHeartbeat(status.agent.launcher, status.agent.online);
-      res.writeHead(200, { "content-type": "application/json" });
-      res.end(JSON.stringify({ ...status, heartbeat }));
+      sendJson(res, 200, { ...status, heartbeat });
     } catch (error) {
-      res.writeHead(400, { "content-type": "application/json" });
-      res.end(
-        JSON.stringify({
-          status: "error",
-          error: error instanceof Error ? error.message : "Status lookup failed."
-        })
-      );
+      sendJson(res, 400, {
+        status: "error",
+        error: error instanceof Error ? error.message : "Status lookup failed."
+      });
     }
     return;
   }
@@ -41,16 +51,21 @@ const server = createServer(async (req, res) => {
       body += chunk;
     });
     req.on("end", async () => {
-      const parsed = body ? JSON.parse(body) : {};
-      const response = await askPersistentMirror({ address, question: String(parsed.question ?? "") });
-      res.writeHead(response.status === "online" ? 200 : 503, { "content-type": "application/json" });
-      res.end(JSON.stringify(response));
+      try {
+        const parsed = body ? JSON.parse(body) : {};
+        const response = await askPersistentMirror({ address, question: String(parsed.question ?? "") });
+        sendJson(res, response.status === "online" ? 200 : 503, response);
+      } catch (error) {
+        sendJson(res, 400, {
+          status: "offline",
+          reason: error instanceof Error ? error.message : "Invalid chat payload."
+        });
+      }
     });
     return;
   }
 
-  res.writeHead(404, { "content-type": "application/json" });
-  res.end(JSON.stringify({ error: "not found" }));
+  sendJson(res, 404, { error: "not found" });
 });
 
 server.listen(config.port, () => {

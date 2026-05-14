@@ -15,3 +15,4 @@ contracts/cache
 apps/web/.env.local
 .codex
 .ritual-build
+.vercel
