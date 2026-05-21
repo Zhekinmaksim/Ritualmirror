@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { ApertureStage } from "@/components/aperture-stage";
-import { LandingSoundControl } from "@/components/landing-sound-control";
 import { SiteHeader } from "@/components/site-header";
 
 const primitives = [
@@ -50,8 +49,7 @@ export default function HomePage() {
             </p>
           </div>
 
-          <div className="mt-10 flex flex-wrap items-center justify-between gap-4 md:mt-0">
-            <LandingSoundControl />
+          <div className="mt-10 flex flex-wrap items-center justify-end gap-4 md:mt-0">
             <p className="font-mono text-xs uppercase tracking-[0.18em] text-[#5b6068]">
               Ritual Chain · 1979
             </p>
