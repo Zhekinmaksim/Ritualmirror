@@ -11,6 +11,18 @@ importers:
       '@ritual-mirror/ritual':
         specifier: workspace:*
         version: link:packages/ritual
+      '@types/node':
+        specifier: ^22.10.2
+        version: 22.19.17
+      '@types/react':
+        specifier: ^19.0.1
+        version: 19.2.14
+      '@types/react-dom':
+        specifier: ^19.0.2
+        version: 19.2.3(@types/react@19.2.14)
+      '@types/three':
+        specifier: ^0.184.0
+        version: 0.184.0
       eciesjs:
         specifier: ^0.4.18
         version: 0.4.18
