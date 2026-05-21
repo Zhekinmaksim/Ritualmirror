@@ -48,6 +48,13 @@ Restart the web app after changing env vars. The create flow links configured co
 
 ## Production Deploy
 
+The codebase can be pushed and deployed independently from the live Ritual callback state.
+
+Current practical split:
+
+- code release / preview deploy: ready when `pnpm build` is green
+- Ritual-native end-to-end launch: still blocked by a live chain incident documented in [docs/CHAIN_INCIDENT.md](/Users/zmaxx/Projects/Ritual%20Mirror/docs/CHAIN_INCIDENT.md)
+
 Production can run in two modes:
 
 - Vercel-only: `apps/web` serves the UI and the status/chat API routes directly
@@ -112,13 +119,13 @@ pnpm --filter worker start
 
 ## Factory-Backed Launch Flow
 
-The real Ritual-native launch path is now script-driven, not browser-driven. This is intentional:
+The Ritual-native launch path is script-driven, not browser-driven. This is intentional:
 
 - Sovereign launch needs executor-key encrypted secrets for `LLM_PROVIDER` and `HF_TOKEN`.
 - Persistent launch needs executor-key encrypted secrets for the model provider API key plus `HF_TOKEN`.
 - Those blobs should stay server-side or operator-side, not in `NEXT_PUBLIC_*` envs.
 
-Dry-run the real factory-backed calls first:
+Dry-run the launch scripts first:
 
 ```bash
 pnpm ritual:agents:preflight 0xYOUR_OWNER
@@ -126,11 +133,35 @@ pnpm ritual:sovereign:launch ./tmp/genesis-payload.json
 pnpm ritual:persistent:launch 0xYOUR_OWNER 0xPROFILE_HASH
 ```
 
-The launch scripts print real calldata, predicted harness/launcher addresses, selected executor, and funding requirements. Nothing is broadcast unless:
+`pnpm ritual:sovereign:launch` now defaults to the two-step harness flow:
+
+1. `deployHarness(userSalt)`
+2. `configureFundAndStart(...)`
+
+This is the intended canonical production route because it gives a stable receiver address and clean monitoring via `AsyncJobTracker.JobAdded`, `ResultDelivered`, and harness callback events.
+
+At the time of writing, the repository supports this path in code, but the live testnet run is still tracked as an open incident in [docs/CHAIN_INCIDENT.md](/Users/zmaxx/Projects/Ritual%20Mirror/docs/CHAIN_INCIDENT.md).
+
+For this path, keep `SOVEREIGN_SCHEDULER_FREQUENCY >= 2000`. The script now hard-fails below that unless you explicitly set `SOVEREIGN_ALLOW_LOW_FREQUENCY=1` for debugging.
+
+If native balance gets tight but your operator `RitualWallet` is unlocked, pull funds back first:
+
+```bash
+pnpm ritual:wallet:check 0xYOUR_OWNER
+BROADCAST=1 pnpm ritual:wallet:withdraw 0.2
+```
+
+The launch scripts print predicted child addresses, selected executor, calldata, and funding requirements. Nothing is broadcast unless:
 
 ```bash
 BROADCAST=1 pnpm ritual:sovereign:launch ./tmp/genesis-payload.json
 BROADCAST=1 pnpm ritual:persistent:launch 0xYOUR_OWNER 0xPROFILE_HASH
+```
+
+If you explicitly want the older one-shot sovereign factory call, set:
+
+```bash
+SOVEREIGN_FACTORY_MODE=compressed pnpm ritual:sovereign:launch ./tmp/genesis-payload.json
 ```
 
 After Phase 2 delivery completes through the real Ritual factory child contracts, bridge the result into the app registry:
@@ -140,7 +171,7 @@ BROADCAST=1 pnpm ritual:genesis:record 0xUSER 0xJOB_ID 0xPROFILE_HASH https://..
 BROADCAST=1 pnpm ritual:launcher:record 0xUSER 0xLAUNCHER hf://workspace/...
 ```
 
-For the current live path, use the single finalize command after the sovereign callback arrives. It checks delivery, syncs the HF workspace, records Genesis into the registry, launches the persistent factory call, and records the launcher address:
+For the live path, use the single finalize command after the sovereign callback arrives. It checks delivery, stops the Genesis harness, syncs the HF workspace, records Genesis into the registry, launches the persistent factory call, and records the launcher address:
 
 ```bash
 pnpm ritual:genesis:finalize 0xUSER 0xJOB_ID 0xRECEIVER 0xPROFILE_HASH https://.../api/metadata/0xUSER
@@ -155,6 +186,12 @@ If you only want the Genesis bridge and HF sync, disable the persistent leg:
 FINALIZE_PERSISTENT=0 BROADCAST=1 pnpm ritual:genesis:finalize 0xUSER 0xJOB_ID 0xRECEIVER 0xPROFILE_HASH https://.../api/metadata/0xUSER
 ```
 
+If you need to stop a sovereign harness manually after the first callback:
+
+```bash
+BROADCAST=1 pnpm ritual:sovereign:stop 0xHARNESS
+```
+
 This repo now includes a local helper for encrypted secret generation:
 
 ```bash
@@ -165,9 +202,18 @@ The ciphertext must still be regenerated whenever the selected executor public k
 
 ## Ritual Integration Status
 
-The repository now contains real factory-backed launch scripts, predicted child address handling, and explicit operator bridge transactions for registry updates. Live testnet verification is still required for:
+The repository now contains:
+
+- direct Sovereign monitoring that resolves effective async job identity from `AsyncJobTracker` logs,
+- factory-backed sovereign launch with two-step harness mode as the default,
+- explicit harness stop after the first Genesis callback,
+- explicit operator bridge transactions for registry updates.
+
+Live testnet verification is still required for:
 
 - encrypted secret blob generation,
 - HF workspace file availability,
 - actual Phase 2 callback delivery on Ritual testnet,
 - final live relay URL from the spawned Persistent Agent deployment.
+
+For the latest live blocker and release guidance, see [docs/CHAIN_INCIDENT.md](/Users/zmaxx/Projects/Ritual%20Mirror/docs/CHAIN_INCIDENT.md).

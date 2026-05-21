@@ -161,6 +161,69 @@ export const sovereignHarnessAbi = [
     stateMutability: "view",
     inputs: [],
     outputs: [{ type: "address" }]
+  },
+  {
+    name: "configured",
+    type: "function",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ type: "bool" }]
+  },
+  {
+    name: "wakeMode",
+    type: "function",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ type: "uint8" }]
+  },
+  {
+    name: "activeCallId",
+    type: "function",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ type: "uint256" }]
+  },
+  {
+    name: "activeNumCalls",
+    type: "function",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ type: "uint32" }]
+  },
+  {
+    name: "currentSeriesId",
+    type: "function",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ type: "uint64" }]
+  },
+  {
+    name: "pendingSeriesId",
+    type: "function",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ type: "uint64" }]
+  },
+  {
+    name: "pendingCallId",
+    type: "function",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ type: "uint256" }]
+  },
+  {
+    name: "thresholdIndex",
+    type: "function",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ type: "uint32" }]
+  },
+  {
+    name: "stop",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [],
+    outputs: []
   }
 ] as const;
 
@@ -269,6 +332,13 @@ export const ritualWalletAbi = [
     stateMutability: "view",
     inputs: [{ name: "user", type: "address" }],
     outputs: [{ type: "uint256" }]
+  },
+  {
+    name: "withdraw",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [{ name: "amount", type: "uint256" }],
+    outputs: []
   }
 ] as const;
 
@@ -293,6 +363,36 @@ export const asyncJobTrackerAbi = [
     stateMutability: "view",
     inputs: [{ name: "jobId", type: "bytes32" }],
     outputs: [{ type: "bool" }]
+  }
+] as const;
+
+export const schedulerAbi = [
+  {
+    name: "calls",
+    type: "function",
+    stateMutability: "view",
+    inputs: [{ name: "callId", type: "uint256" }],
+    outputs: [
+      { name: "to", type: "address" },
+      { name: "caller", type: "address" },
+      { name: "startBlock", type: "uint32" },
+      { name: "numCalls", type: "uint32" },
+      { name: "frequency", type: "uint32" },
+      { name: "gas", type: "uint32" },
+      { name: "ttl", type: "uint32" },
+      { name: "state", type: "uint8" },
+      { name: "maxFeePerGas", type: "uint256" },
+      { name: "maxPriorityFeePerGas", type: "uint256" },
+      { name: "value", type: "uint256" },
+      { name: "data", type: "bytes" }
+    ]
+  },
+  {
+    name: "getCallState",
+    type: "function",
+    stateMutability: "view",
+    inputs: [{ name: "callId", type: "uint256" }],
+    outputs: [{ name: "state", type: "uint8" }]
   }
 ] as const;
 
@@ -406,6 +506,17 @@ export const ritualMirrorSovereignConsumerAbi = [
 ] as const;
 
 export const ritualMirrorAgentManagerAbi = [
+  {
+    name: "recordSpawnedAgent",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "user", type: "address" },
+      { name: "launcher", type: "address" },
+      { name: "workspaceURI", type: "string" }
+    ],
+    outputs: []
+  },
   {
     name: "requestSpawn",
     type: "function",

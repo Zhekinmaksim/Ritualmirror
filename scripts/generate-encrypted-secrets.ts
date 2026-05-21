@@ -1,8 +1,6 @@
 import { writeFileSync } from "node:fs";
 import { ECIES_CONFIG, encrypt } from "eciesjs";
-import { createPublicClient, http } from "viem";
-import { requireEnv } from "./_ritual-operator";
-import { ritualSystemAddresses, ritualTestnet, teeServiceRegistryAbi } from "@ritual-mirror/ritual";
+import { requireEnv, selectHttpExecutor } from "./_ritual-operator";
 
 ECIES_CONFIG.symmetricNonceLength = 12;
 
@@ -65,31 +63,45 @@ function buildPersistentSecrets(): Record<string, string> {
     throw new Error("Persistent Agent does not support provider=ritual. Use anthropic/openai/gemini/openrouter/xai.");
   }
 
+  const daProvider = (process.env.DA_PROVIDER ?? "hf").toLowerCase();
   const keyName = providerKeyName(provider);
-  return {
-    HF_TOKEN: requireEnv("HF_TOKEN"),
+  const payload: Record<string, string> = {
+    LLM_PROVIDER: provider,
+    llm_provider: provider,
+    DA_PROVIDER: daProvider,
+    da_provider: daProvider,
     [keyName]: requireEnv(keyName)
   };
+
+  if (daProvider === "hf") {
+    payload.HF_TOKEN = requireEnv("HF_TOKEN");
+    payload.hf_token = payload.HF_TOKEN;
+    payload.HF_REPO_ID = requireEnv("HF_REPO_ID");
+    payload.hf_repo_id = payload.HF_REPO_ID;
+    return payload;
+  }
+
+  if (daProvider === "gcs") {
+    payload.GCS_CREDENTIALS = JSON.stringify({
+      service_account_json: requireEnv("GCS_DA_SERVICE_ACCOUNT_JSON"),
+      bucket: requireEnv("GCS_DA_BUCKET")
+    });
+    return payload;
+  }
+
+  if (daProvider === "pinata") {
+    payload.DA_PINATA_JWT = requireEnv("DA_PINATA_JWT");
+    if (process.env.DA_PINATA_GATEWAY) {
+      payload.DA_PINATA_GATEWAY = process.env.DA_PINATA_GATEWAY;
+    }
+    return payload;
+  }
+
+  throw new Error(`Unsupported DA_PROVIDER for persistent secrets: ${daProvider}`);
 }
 
 async function main() {
-  const publicClient = createPublicClient({
-    chain: ritualTestnet,
-    transport: http(process.env.RITUAL_RPC_URL ?? "https://rpc.ritualfoundation.org")
-  });
-  const services = await publicClient.readContract({
-    address: ritualSystemAddresses.teeServiceRegistry,
-    abi: teeServiceRegistryAbi,
-    functionName: "getServicesByCapability",
-    args: [0, true]
-  });
-  const selected = services[0];
-  if (!selected) throw new Error("No valid HTTP_CALL executor found in TEEServiceRegistry.");
-  const executor = {
-    teeAddress: selected.node.teeAddress,
-    publicKey: selected.node.publicKey as `0x${string}`,
-    paymentAddress: selected.node.paymentAddress
-  };
+  const executor = await selectHttpExecutor();
   const sovereignSecrets = buildSovereignSecrets();
   const persistentSecrets = buildPersistentSecrets();
 

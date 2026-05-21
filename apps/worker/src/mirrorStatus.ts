@@ -169,7 +169,7 @@ export async function getMirrorStatus(address: string): Promise<MirrorStatusResp
   const agentDiagnostics: string[] = [];
   if (!launcher && !storedLauncher) agentDiagnostics.push("No Persistent Agent launcher is stored for this Mirror.");
   if (launcher || storedLauncher) {
-    agentDiagnostics.push("Heartbeat transport is not wired to AgentHeartbeat yet.");
+    agentDiagnostics.push("AgentManager marks this mirror online. Check heartbeat diagnostics for chain-level liveness.");
   }
   if (!config.relayUrl) {
     agentDiagnostics.push("RELAY_URL is not configured for agent chat transport.");

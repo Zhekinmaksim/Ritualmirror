@@ -161,6 +161,7 @@ function renderManifest(owner: string, repoId: string, profile?: MirrorProfile) 
       version: 1,
       protocol: "ritual-mirror",
       daProvider: "hf",
+      da_provider: "hf",
       owner,
       repoId,
       generatedAt: new Date().toISOString(),

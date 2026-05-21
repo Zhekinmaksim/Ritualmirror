@@ -73,11 +73,17 @@ function shouldLaunchPersistent() {
   return process.env.FINALIZE_PERSISTENT !== "0";
 }
 
+function shouldStopHarness() {
+  return process.env.FINALIZE_STOP_SOVEREIGN !== "0";
+}
+
 function main() {
   const { owner, jobId, receiver, profileHash, metadataURI, payloadPath, profilePath } = parseArgs();
   const broadcast = maybeBroadcast();
 
   const sovereignResult = runJsonScript("fetch-sovereign-result.ts", [receiver, jobId, profilePath]);
+  const effectiveJobId =
+    typeof sovereignResult.effectiveJobId === "string" ? sovereignResult.effectiveJobId : jobId;
   const delivered = sovereignResult.delivered === true;
   const success = sovereignResult.success === true;
   const hasProfile = !!sovereignResult.profile;
@@ -88,7 +94,8 @@ function main() {
         {
           mode: broadcast ? "broadcast" : "dry-run",
           owner,
-          jobId,
+          submittedTxHash: jobId,
+          effectiveJobId,
           receiver,
           profileHash,
           metadataURI,
@@ -105,9 +112,14 @@ function main() {
     process.exit(2);
   }
 
+  let sovereignStop: JsonRecord | null = null;
+  if (shouldStopHarness()) {
+    sovereignStop = runJsonScript("stop-sovereign-harness.ts", [receiver]);
+  }
+
   const hfSync = runJsonScript("sync-hf-workspace.ts", [owner, payloadPath, profilePath]);
   const workspaceURI = String(hfSync.workspaceURI);
-  const genesisRecord = runJsonScript("record-genesis-result.ts", [owner, jobId, profileHash, metadataURI, workspaceURI]);
+  const genesisRecord = runJsonScript("record-genesis-result.ts", [owner, effectiveJobId, profileHash, metadataURI, workspaceURI]);
 
   let persistentLaunch: JsonRecord | null = null;
   let launcherRecord: JsonRecord | null = null;
@@ -127,7 +139,8 @@ function main() {
         mode: broadcast ? "broadcast" : "dry-run",
         finalized: true,
         owner,
-        jobId,
+        submittedTxHash: jobId,
+        effectiveJobId,
         receiver,
         profileHash,
         metadataURI,
@@ -135,6 +148,7 @@ function main() {
         profilePath,
         workspaceURI,
         sovereignResult,
+        sovereignStop,
         hfSync,
         genesisRecord,
         persistentLaunch,

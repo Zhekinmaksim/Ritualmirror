@@ -80,6 +80,18 @@ export function buildClients() {
 }
 
 export async function selectHttpExecutor() {
+  const teeAddress = process.env.RITUAL_EXECUTOR_TEE_ADDRESS;
+  const paymentAddress = process.env.RITUAL_EXECUTOR_PAYMENT_ADDRESS;
+  const publicKey = process.env.RITUAL_EXECUTOR_PUBLIC_KEY;
+
+  if (teeAddress && paymentAddress && publicKey) {
+    return {
+      teeAddress: getAddress(teeAddress),
+      publicKey: publicKey as Hex,
+      paymentAddress: getAddress(paymentAddress)
+    };
+  }
+
   const { publicClient } = buildClients();
   const services = await publicClient.readContract({
     address: ritualSystemAddresses.teeServiceRegistry,

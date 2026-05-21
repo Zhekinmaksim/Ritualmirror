@@ -67,13 +67,17 @@ async function main() {
 
   const executor = await selectHttpExecutor();
   const userSalt = mirrorUserSalt(owner, mirrorLabel);
-  const prediction = await publicClient.readContract({
-    address: ritualSystemAddresses.persistentAgentFactory,
-    abi: persistentFactoryAbi,
-    functionName: "predictCompressedLauncher",
-    args: [owner, userSalt]
-  });
-  const predictedLauncher = prediction[0];
+  const predictedLauncherOverride = process.env.PERSISTENT_PREDICTED_LAUNCHER;
+  const predictedLauncher = predictedLauncherOverride
+    ? getAddress(predictedLauncherOverride)
+    : (
+        await publicClient.readContract({
+          address: ritualSystemAddresses.persistentAgentFactory,
+          abi: persistentFactoryAbi,
+          functionName: "predictCompressedLauncher",
+          args: [owner, userSalt]
+        })
+      )[0];
 
   const repoId = requireEnv("HF_REPO_ID");
   const provider = parseProvider(requireEnv("PERSISTENT_LLM_PROVIDER"));

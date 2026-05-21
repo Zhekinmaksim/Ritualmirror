@@ -127,12 +127,22 @@ export function persistentRepoRefs(owner: `0x${string}`, repoId: string) {
 }
 
 export function mirrorGenesisPrompt(payload: MirrorGenesisPayload) {
+  const compactInput = {
+    wallet: payload.input.wallet,
+    nickname: payload.input.nickname,
+    bio: payload.input.bio,
+    xUrl: payload.input.xUrl,
+    githubUrl: payload.input.githubUrl,
+    websiteUrl: payload.input.websiteUrl,
+    projectIdea: payload.input.projectIdea,
+    builderType: payload.input.builderType,
+    responseStyle: payload.input.responseStyle
+  };
+
   return [
-    "Generate a strict JSON object for a Ritual Mirror genesis profile.",
-    "Return JSON only. No markdown. No commentary.",
-    "Required keys:",
-    "mirrorName, archetype, mission, strengths, blindSpots, ritualPrimitiveFit, voiceStyle, agentPrompt, memorySeed, nftTraits, shareText.",
-    `Input payload: ${JSON.stringify(payload)}`
+    "Return JSON only.",
+    "Required keys: mirrorName, archetype, mission, strengths, blindSpots, ritualPrimitiveFit, voiceStyle, agentPrompt, memorySeed, nftTraits, shareText.",
+    `Builder input: ${JSON.stringify(compactInput)}`
   ].join("\n");
 }
 

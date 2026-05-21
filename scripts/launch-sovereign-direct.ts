@@ -1,7 +1,9 @@
-import { encodeAbiParameters, getAddress, isAddress, parseAbiParameters, toFunctionSelector } from "viem";
+import { encodeAbiParameters, getAddress, isAddress, keccak256, parseAbiParameters, toFunctionSelector } from "viem";
 import {
   mirrorGenesisPrompt,
+  ritualSystemAddresses,
   ritualTestnet,
+  ritualWalletAbi,
   sovereignRepoRefs,
   type MirrorGenesisPayload
 } from "@ritual-mirror/ritual";
@@ -40,7 +42,7 @@ async function main() {
   }
 
   const payload = loadJsonFile<MirrorGenesisPayload>(payloadPath);
-  const { account, walletClient, rpcUrl } = buildClients();
+  const { account, publicClient, walletClient, rpcUrl } = buildClients();
   const owner = getAddress(payload.owner);
   if (owner !== account.address) {
     throw new Error(`Payload owner ${owner} does not match PRIVATE_KEY account ${account.address}.`);
@@ -57,9 +59,26 @@ async function main() {
   const refs = sovereignRepoRefs(owner, repoId);
 
   const receiver = getAddress(receiverArg);
+  const [submitBlock, ritualWalletBalance, ritualWalletLockUntil] = await Promise.all([
+    publicClient.getBlockNumber(),
+    publicClient.readContract({
+      address: ritualSystemAddresses.ritualWallet,
+      abi: ritualWalletAbi,
+      functionName: "balanceOf",
+      args: [account.address]
+    }),
+    publicClient.readContract({
+      address: ritualSystemAddresses.ritualWallet,
+      abi: ritualWalletAbi,
+      functionName: "lockUntil",
+      args: [account.address]
+    })
+  ]);
+  const ttl = BigInt(optionalNumber("SOVEREIGN_TTL", 500));
+  const requiredLockUntil = submitBlock + ttl;
   const data = encodeAbiParameters(sovereignAgentAbi, [
     executor.teeAddress,
-    BigInt(optionalNumber("SOVEREIGN_TTL", 500)),
+    ttl,
     "0x",
     BigInt(optionalNumber("SOVEREIGN_POLL_INTERVAL_BLOCKS", 5)),
     BigInt(optionalNumber("SOVEREIGN_MAX_POLL_BLOCK", 6000)),
@@ -94,6 +113,14 @@ async function main() {
           executor,
           cliType,
           model,
+          submitBlock: submitBlock.toString(),
+          ritualWallet: {
+            balance: ritualWalletBalance.toString(),
+            lockUntil: ritualWalletLockUntil.toString(),
+            requiredLockUntil: requiredLockUntil.toString(),
+            lockSufficient: ritualWalletLockUntil >= requiredLockUntil
+          },
+          precompileInputHash: keccak256(data),
           calldata: data
         },
         null,
@@ -101,6 +128,16 @@ async function main() {
       )
     );
     return;
+  }
+
+  if (ritualWalletBalance === 0n) {
+    throw new Error("Operator RitualWallet balance is zero. Fund and lock it before direct sovereign launch.");
+  }
+
+  if (ritualWalletLockUntil < requiredLockUntil) {
+    throw new Error(
+      `Operator RitualWallet lock is too short for direct sovereign launch. Required until at least block ${requiredLockUntil}, locked until ${ritualWalletLockUntil}.`
+    );
   }
 
   const hash = await walletClient.sendTransaction({
@@ -113,13 +150,15 @@ async function main() {
 
   console.log(
     JSON.stringify(
-      {
-        mode: "broadcast",
-        owner,
-        receiver,
-        txHash: hash
-      },
-      null,
+        {
+          mode: "broadcast",
+          owner,
+          receiver,
+          submitBlock: submitBlock.toString(),
+          precompileInputHash: keccak256(data),
+          txHash: hash
+        },
+        null,
       2
     )
   );
